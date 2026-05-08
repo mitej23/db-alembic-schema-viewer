@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+env/
+.eggs/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Tests / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local config
+.env
+.env.local
+
+# This package itself — keep private
+# (uncomment if vendored inside another repo)
+# schema-viewer/

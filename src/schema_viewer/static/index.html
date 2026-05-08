@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Schema Viewer</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2318181b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect width='18' height='18' x='3' y='3' rx='2'/%3E%3Cpath d='M3 9h18'/%3E%3Cpath d='M3 15h18'/%3E%3Cpath d='M9 3v18'/%3E%3Cpath d='M15 3v18'/%3E%3C/svg%3E" />
+    <link rel="preconnect" href="https://esm.sh" />
+    <link rel="stylesheet" href="https://esm.sh/@xyflow/react@12.4.4/dist/style.css" />
+    <link rel="stylesheet" href="/static/styles.css" />
+    <script>
+      // Apply theme before paint to avoid flash.
+      (function () {
+        try {
+          var stored = localStorage.getItem('schema-viewer:theme');
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var theme = stored === 'light' || stored === 'dark' ? stored : (prefersDark ? 'dark' : 'light');
+          document.documentElement.classList.toggle('dark', theme === 'dark');
+          document.documentElement.dataset.theme = theme;
+        } catch (e) {}
+      })();
+    </script>
+    <script type="importmap">
+      {
+        "imports": {
+          "react": "https://esm.sh/react@18.3.1",
+          "react/jsx-runtime": "https://esm.sh/react@18.3.1/jsx-runtime",
+          "react-dom": "https://esm.sh/react-dom@18.3.1",
+          "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+          "@xyflow/react": "https://esm.sh/@xyflow/react@12.4.4?deps=react@18.3.1,react-dom@18.3.1",
+          "@dagrejs/dagre": "https://esm.sh/@dagrejs/dagre@1.1.4",
+          "htm": "https://esm.sh/htm@3.1.1"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root">
+      <div class="boot">
+        <div class="boot-spinner"></div>
+        <div class="boot-text">Loading schema viewer</div>
+      </div>
+    </div>
+    <script type="module" src="/static/app.js"></script>
+  </body>
+</html>
