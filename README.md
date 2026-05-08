@@ -5,6 +5,8 @@ A read-only schema visualizer for Python projects using **SQLAlchemy** and
 diagram in your browser — with FK arrows, search, dark mode, and the full
 Alembic migration history a click away.
 
+![schema-viewer screenshot](./docs/screenshot.png)
+
 ```
 ┌─────────────────────────┐    ┌────────────────────────┐
 │  SQLAlchemy MetaData    │ ─▶ │                        │
