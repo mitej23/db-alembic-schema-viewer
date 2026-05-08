@@ -10,36 +10,60 @@ from .inspectors.database import safe_url, to_sync_url
 from .server import Settings, create_app
 
 
+def _running_under_pipx() -> bool:
+    """Detect whether schema-viewer is installed in a pipx-managed venv."""
+    return "pipx/venvs/schema-viewer" in sys.executable.replace("\\", "/")
+
+
 def _print_module_not_found_help(missing: str, models_target: str) -> None:
+    is_pipx = _running_under_pipx()
+    fix_cmd = (
+        f"pipx inject schema-viewer {missing}"
+        if is_pipx
+        else f"pip install {missing}"
+    )
+
     click.echo("", err=True)
-    click.secho(f"  error: missing dependency '{missing}'", fg="red", bold=True, err=True)
+    click.secho(f"  ✗ missing dependency: {missing}", fg="red", bold=True, err=True)
     click.echo(
-        f"  while loading {models_target!r}, Python tried to import '{missing}' "
-        "but it isn't available in this environment.",
+        f"    Loading {models_target!r} requires '{missing}', which isn't installed",
+        err=True,
+    )
+    click.echo(
+        "    in schema-viewer's environment.",
         err=True,
     )
     click.echo("", err=True)
-    click.secho("  what to do:", bold=True, err=True)
-    click.echo(
-        f"    1. add the dep to schema-viewer's env:    pipx inject schema-viewer {missing}",
+
+    # Headline fix — separate line, nothing else around it, easy to copy.
+    click.secho("  ▸ run this, then re-run schema-viewer:", bold=True, err=True)
+    click.echo("", err=True)
+    click.secho(f"      {fix_cmd}", fg="cyan", bold=True, err=True)
+    click.echo("", err=True)
+
+    # Alternatives in plain text.
+    click.secho("    alternatives:", dim=True, err=True)
+    click.secho(
+        "      • skip imports entirely (no inject needed):",
+        dim=True,
         err=True,
     )
-    click.echo(
-        "    2. or install schema-viewer into your project's venv:",
+    click.secho(
+        "          schema-viewer studio --db-url $DATABASE_URL",
+        dim=True,
         err=True,
     )
-    click.echo(
-        "         (activate venv) pip install -e /path/to/db-alembic-schema-viewer",
-        err=True,
-    )
-    click.echo(
-        "    3. or skip imports entirely and reflect from the live DB:",
-        err=True,
-    )
-    click.echo(
-        "         schema-viewer studio --db-url $DATABASE_URL",
-        err=True,
-    )
+    if is_pipx:
+        click.secho(
+            "      • or install schema-viewer into your project's venv to share its deps:",
+            dim=True,
+            err=True,
+        )
+        click.secho(
+            "          (activate venv) pip install git+https://github.com/mitej23/db-alembic-schema-viewer.git",
+            dim=True,
+            err=True,
+        )
     click.echo("", err=True)
 
 
