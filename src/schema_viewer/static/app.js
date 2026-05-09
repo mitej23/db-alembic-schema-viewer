@@ -523,50 +523,59 @@ function TopBar({
 }) {
   const live = meta?.kind === 'live';
   const cached = meta?.kind === 'cached';
+
   return html`
-    <header class="topbar">
-      ${(cached || (info && info.mode === 'dashboard'))
-        ? html`<button class="icon-btn" onClick=${onBackToDashboard} title="Dashboard" aria-label="Dashboard">
-            <${Icon.arrowLeft}/>
-          </button>`
-        : null}
-      <div class="topbar-brand">
-        <${Icon.database} size=${15}/>
-        <span>schema-viewer</span>
-        ${meta?.projectName && html`<span class="brand-sep">·</span><span class="brand-project">${meta.projectName}</span>`}
-      </div>
-      <div class="topbar-meta">
+    <header class="topbar topbar-studio">
+      <button
+        class="icon-btn topbar-back"
+        onClick=${onBackToDashboard}
+        title="Back to dashboard"
+        aria-label="Back to dashboard"
+      >
+        <${Icon.arrowLeft}/>
+      </button>
+      <a class="topbar-brand" href="#/" aria-label="Dashboard">
+        <span class="topbar-brand-mark">
+          <${Icon.database} size=${14}/>
+        </span>
+        <span class="topbar-brand-name">schema-viewer</span>
+      </a>
+      ${meta?.projectName && html`
+        <span class="topbar-crumb-sep" aria-hidden="true">/</span>
+        <span class="topbar-crumb">${meta.projectName}</span>
+      `}
+      <div class="topbar-pills">
         ${schema && html`
           <span class="pill" title="Tables in scope">
             <span class="dot"/>
             ${schema.tables.length} ${schema.tables.length === 1 ? 'table' : 'tables'}
           </span>
         `}
-        ${live && meta?.source && html`
-          <span class="source-label" title=${meta.source.target}>
-            ${meta.source.target}
-          </span>
-        `}
         ${cached && html`
-          <span class="pill" title=${`Cached fetch · ${meta.fetchedAt}`}>
+          <span class="pill" title=${`Last fetched ${meta.fetchedAt}`}>
             <${Icon.clock} size=${10}/>
             cached · ${relTime(meta.fetchedAt)}
           </span>
         `}
         ${meta?.branch && html`
-          <span class="pill muted" title="Git branch">
+          <span class="pill muted" title="Git branch at fetch time">
             <${Icon.gitBranch} size=${10}/>
             ${meta.branch}
           </span>
         `}
         ${schema?.current_revision && html`
-          <span class="pill muted" title="alembic_version">
+          <span class="pill muted" title="Current alembic_version">
             head · ${schema.current_revision.slice(0, 12)}
           </span>
         `}
       </div>
       <div class="topbar-spacer"/>
       <div class="topbar-actions">
+        ${live && meta?.source?.target && html`
+          <span class="source-label" title=${meta.source.target}>
+            ${meta.source.target}
+          </span>
+        `}
         ${migrationCount > 0 && html`
           <button class="btn" onClick=${onOpenMigrations} title="Open migration history">
             <${Icon.history} size=${14}/>
@@ -578,6 +587,7 @@ function TopBar({
             <${Icon.refresh}/>
           </button>
         `}
+        <span class="topbar-divider" aria-hidden="true"/>
         <${ThemeToggle} theme=${theme} setTheme=${setTheme}/>
       </div>
     </header>
@@ -1328,28 +1338,21 @@ function Dashboard({ info, theme, setTheme }) {
 
   return html`
     <div class="dashboard">
-      <header class="topbar">
-        <div class="topbar-brand">
-          <${Icon.database} size=${15}/>
-          <span>schema-viewer</span>
-          <span class="brand-sep">·</span>
-          <span class="brand-project">dashboard</span>
-        </div>
-        <div class="topbar-meta">
-          ${projects && html`
-            <span class="pill">
-              <span class="dot"/>
-              ${projects.length} ${projects.length === 1 ? 'project' : 'projects'}
-            </span>
-          `}
-        </div>
+      <header class="topbar topbar-dashboard">
+        <a class="topbar-brand topbar-brand-link" href="#/" aria-label="schema-viewer home">
+          <span class="topbar-brand-mark">
+            <${Icon.database} size=${14}/>
+          </span>
+          <span class="topbar-brand-name">schema-viewer</span>
+        </a>
         <div class="topbar-spacer"/>
         <div class="topbar-actions">
-          <button class="btn btn-primary" onClick=${() => setAddOpen(true)} title="Add project">
-            <span style=${{ fontSize: 14, lineHeight: 1, marginRight: 2 }}>+</span>
+          <button class="btn btn-primary" onClick=${() => setAddOpen(true)} title="Add a new project (browse + fetch)">
+            <span class="btn-plus">+</span>
             <span>Add project</span>
           </button>
-          <button class="icon-btn" onClick=${load} title="Reload" aria-label="Reload">
+          <span class="topbar-divider" aria-hidden="true"/>
+          <button class="icon-btn" onClick=${load} title="Reload cache" aria-label="Reload cache">
             <${Icon.refresh}/>
           </button>
           <${ThemeToggle} theme=${theme} setTheme=${setTheme}/>
