@@ -1,22 +1,25 @@
 # db-alembic-schema-viewer
 
-A read-only schema visualizer for Python projects using **SQLAlchemy** and
-**Alembic**. Drop into any project, run one command, and get an interactive ER
-diagram in your browser — with FK arrows, search, dark mode, and the full
+A read-only schema visualizer + persistent cache for Python projects using
+**SQLAlchemy** and **Alembic**. Run one command from anywhere, browse all your
+cached projects from a dashboard, click any snapshot to see its ER diagram —
+with FK arrows, search, dark mode, **double-tap focus mode**, and the full
 Alembic migration history a click away.
 
 ![schema-viewer screenshot](./docs/screenshot.png)
 
 ```
-┌─────────────────────────┐    ┌────────────────────────┐
-│  SQLAlchemy MetaData    │ ─▶ │                        │
-│  (or live DB reflect)   │    │   FastAPI (localhost)  │ ─▶ Browser
-│  Alembic ScriptDir      │ ─▶ │                        │     (React Flow)
-└─────────────────────────┘    └────────────────────────┘
+┌─────────────────────────┐    ┌────────────────────────┐    ┌──────────┐
+│  SQLAlchemy MetaData    │ ─▶ │                        │ ─▶ │ Browser  │
+│  (or live DB reflect)   │    │   FastAPI (localhost)  │    │ React    │
+│  Alembic ScriptDir      │ ─▶ │   + SQLite cache       │    │ Flow     │
+└─────────────────────────┘    └────────────────────────┘    └──────────┘
 ```
 
-It's a dev tool. No data is ever written — the inspector calls
-`MetaData.reflect()` and reads `alembic_version`, nothing more.
+It's a dev tool. No data is ever written to the source DB — the inspector
+calls `MetaData.reflect()` and reads `alembic_version`, nothing more. Snapshots
+are persisted locally to `~/.local/share/schema-viewer/cache.db` for instant
+re-opens.
 
 ## Quick start
 
@@ -26,11 +29,25 @@ brew install pipx                     # if you don't have it
 pipx install git+https://github.com/mitej23/db-alembic-schema-viewer.git
 pipx inject schema-viewer psycopg2-binary    # or pymysql for MySQL
 
-# then in any SQLAlchemy + Alembic project:
+# from anywhere — opens the dashboard with all your cached projects:
+schema-viewer
+```
+
+That's the whole interactive flow. The dashboard lets you **+ Add project** by
+browsing to a folder, picking the schema package via a nested folder picker,
+and one-click **Fetch & open** — no terminal-flipping required. Add an alias
+if you want it shorter:
+
+```bash
+echo "alias sv='schema-viewer'" >> ~/.zshrc
+```
+
+To attach to a live source from the command line (and auto-cache the result):
+
+```bash
 cd path/to/your/project
-schema-viewer studio --models app.db.schema --alembic-ini alembic.ini
-# or, if you'd rather just point at a live DB:
-schema-viewer studio --db-url "$DATABASE_URL"
+schema-viewer studio --models app.db.schema     # walk a package, find Base
+schema-viewer studio --db-url "$DATABASE_URL"   # reflect from a live DB
 ```
 
 The browser opens at `http://127.0.0.1:5555`. `Ctrl+C` to stop.
@@ -95,23 +112,62 @@ schema-viewer studio \
   --alembic-ini alembic.ini
 ```
 
-## Options
+## Commands
 
-| Flag                  | Default        | Description                                          |
-| --------------------- | -------------- | ---------------------------------------------------- |
-| `-m, --models`        | —              | `pkg.module:attr` (explicit) or `pkg` (walks package) |
-| `-d, --db-url`        | `$DATABASE_URL`| Connection URL (async drivers auto-normalized)       |
-| `-a, --alembic-ini`   | `alembic.ini`  | Path to `alembic.ini` (auto-detected if present)     |
-| `-s, --schema`        | —              | DB schema name for reflection (e.g. `public`)        |
-| `--host`              | `127.0.0.1`    | Bind host (loopback only by default)                 |
-| `-p, --port`          | `5555`         | Bind port                                            |
-| `--no-browser`        | off            | Don't auto-open the browser                          |
+```bash
+schema-viewer                         # opens the dashboard (default)
+schema-viewer dashboard               # explicit dashboard launch
+schema-viewer studio --models PKG     # attach to a live source + cache
+schema-viewer studio --db-url URL     # attach to a live DB + cache
+schema-viewer fetch --models PKG      # fetch + cache + exit (no browser)
+schema-viewer cache list              # list cached entries for cwd
+schema-viewer cache list --all        # across all projects
+schema-viewer cache clear             # clear current project's entries
+schema-viewer cache forget PATH       # remove a project from the cache
+schema-viewer cache path              # print the SQLite cache path
+```
+
+### `studio` flags
+
+| Flag                  | Default        | Description                                            |
+| --------------------- | -------------- | ------------------------------------------------------ |
+| `-m, --models`        | —              | `pkg.module:attr` (explicit) or `pkg` (walks package)  |
+| `-d, --db-url`        | `$DATABASE_URL`| Connection URL (async drivers auto-normalized)         |
+| `-a, --alembic-ini`   | `alembic.ini`  | Path to `alembic.ini` (auto-detected if present)       |
+| `-s, --schema`        | —              | DB schema name for reflection (e.g. `public`)          |
+| `--env`               | —              | Optional label (`prod`, `staging`, `local`) for the lane|
+| `--no-cache`          | off            | Don't write the fetch to the cache                     |
+| `--host`              | `127.0.0.1`    | Bind host (loopback only by default)                   |
+| `-p, --port`          | `5555`         | Bind port                                              |
+| `--no-browser`        | off            | Don't auto-open the browser                            |
 
 ## What you see
+
+### Dashboard (`schema-viewer`)
+
+- One-line **project list** — every project you've ever fetched, with one row
+  per cached snapshot showing lane (models / database), branch, source target,
+  table count, and time since last fetch. Click any row to open it.
+- **+ Add project** — slides in a wizard. Step 1: browse to your project's
+  root (chip flags show which folders have `alembic.ini` / `pyproject.toml` /
+  `.git`). Step 2: a **nested folder picker** lets you click into the schema
+  folder; the dotted Python module path (`app.db.schema`) is computed
+  automatically. Live "WILL RUN" preview shows the exact command before you
+  fetch.
+- **Auto-detection** — when you pick a project, the tool scans for
+  `alembic.ini`, `.env`, and the most likely model packages (ranked by name).
+
+### Studio (the diagram view)
 
 - **Canvas** — every table as a card; columns with PK / FK / UQ / nullable
   flags; FK relationships drawn column-to-column with arrows. Click a table
   to highlight it; the canvas pans smoothly to it.
+- **Double-tap focus mode** — double-click any table to isolate it. The
+  focused table gets a **double border**, every other table fades to ~18%
+  opacity, and only edges that touch the focused table stay visible. Great
+  for tracing data flow ("what does `bookings` connect to?"). A banner at the
+  top says "Focused on X · showing direct connections only" — double-tap
+  again, click "Clear", or press **Esc** to toggle it off.
 - **Sidebar** — searchable table list. Each row is collapsible — click the
   chevron to expand and see all columns inline (with type and PK/FK flags).
   Cmd+K focuses the search.
@@ -162,36 +218,50 @@ aren't in schema-viewer's env, you'll get a clear error with three options:
 
 ## How it works
 
-1. The CLI imports your declarative `Base` (with `cwd` on `sys.path`) — or
-   walks the package and finds every Base — or opens a SQLAlchemy connection
-   and calls `MetaData.reflect()`.
-2. A FastAPI app on `127.0.0.1` exposes:
-   - `GET /api/schema`     → table/column/FK/index JSON
-   - `GET /api/migrations` → Alembic revisions, with `is_applied` populated
-     by reading `alembic_version` from the live DB (read-only)
-   - `GET /api/migrations/{rev}/source` → the migration file contents
-3. The browser loads a single static page that fetches the JSON and renders
-   an interactive React Flow diagram, laid out with Dagre.
-
-The frontend uses an import map to load React, React Flow, and Dagre from
-`esm.sh` at runtime. There is **no Node build step** — modify `static/app.js`
-and reload the page.
+1. **Source resolution** — the CLI either imports your declarative `Base`
+   (with `cwd` on `sys.path`), walks a package and finds every Base, or
+   opens a SQLAlchemy connection and calls `MetaData.reflect()`.
+2. **Persistence** — every successful fetch writes to a local SQLite cache
+   at `~/.local/share/schema-viewer/cache.db`. There's at most one row per
+   `(project, lane, branch)` triple — fresh fetches update in place.
+3. **Server** — a FastAPI app on `127.0.0.1` exposes:
+   - `GET /api/schema` (studio mode) → live fetch + auto-cache
+   - `GET /api/cache/projects` and `/api/cache/entries/{id}` → browse cache
+   - `POST /api/cache/fetch` → "Add project" wizard backend
+   - `GET /api/fs/list`, `/api/fs/detect` → folder browser + project scan
+   - `GET /api/migrations`, `/api/migrations/{rev}/source` → Alembic data
+4. **Frontend** — a single static page with hash routing (`/`, `/live`,
+   `/entry/<id>`). Renders the dashboard or studio depending on the route.
+   React + React Flow + Dagre loaded from `esm.sh` at runtime — **no Node
+   build step**.
 
 ## Architecture
 
 ```
 src/schema_viewer/
-├── cli.py                # `schema-viewer studio` entrypoint
-├── server.py             # FastAPI app + Settings
+├── cli.py                # CLI: dashboard, studio, fetch, cache
+├── server.py             # FastAPI app: studio + cache + fs endpoints
+├── cache.py              # SQLite cache layer
+├── git_context.py        # branch / commit SHA / dirty flag capture
 ├── models.py             # Pydantic response schemas
 ├── inspectors/
 │   ├── sqlalchemy.py     # explicit + package-walk discovery
 │   ├── database.py       # live introspection + async URL normalization
 │   └── alembic.py        # migration history + applied state
-└── static/               # served as-is
-    ├── index.html        # import map for esm.sh
-    ├── styles.css        # shadcn tokens, light + dark
-    └── app.js            # React + React Flow (htm template literals)
+└── static/
+    ├── index.html        # import map for esm.sh, pre-paint theme init
+    ├── styles.css        # shadcn-style tokens, light + dark
+    └── app.js            # Dashboard + Studio with hash routing (htm)
+```
+
+The cache schema:
+
+```sql
+projects(id, path, name, created_at)
+entries(id, project_id, source_type, source_target, source_env,
+        branch, commit_sha, is_dirty, schema_json, migrations_json,
+        current_revision, table_count, content_hash, fetched_at)
+-- UNIQUE(project_id, source_type, source_target, source_env, branch)
 ```
 
 ## Read-only guarantees
