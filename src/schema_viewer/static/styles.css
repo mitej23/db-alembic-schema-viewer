@@ -170,7 +170,7 @@ input:focus-visible { outline: 2px solid var(--ring); outline-offset: -1px; }
 
 .app {
   display: grid;
-  grid-template-rows: 52px 1fr;
+  grid-template-rows: 60px 1fr;
   grid-template-columns: 280px 1fr;
   grid-template-areas:
     "topbar topbar"
@@ -181,32 +181,41 @@ input:focus-visible { outline: 2px solid var(--ring); outline-offset: -1px; }
 
 /* ─── Top bar ─────────────────────────────────────────────────────────── */
 
+/* ─── Top bar ────────────────────────────────────────────────────────── */
+
 .topbar {
   grid-area: topbar;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 12px 0 14px;
-  height: 52px;
+  gap: 12px;
+  padding: 0 clamp(16px, 3vw, 28px);
+  height: 60px;
   background: var(--background);
   border-bottom: 1px solid var(--border);
+  /* Subtle elevation lifts the navbar above content without going glassy */
+  box-shadow: 0 1px 0 0 color-mix(in oklch, var(--border) 50%, transparent);
   z-index: 10;
 }
 
+/* Dashboard navbar gets a touch more padding to feel calmer at the home screen */
+.topbar-dashboard { padding: 0 clamp(20px, 3.5vw, 32px); }
+
 .topbar-back {
-  margin-right: 2px;
+  margin-right: 4px;
+  width: 34px;
+  height: 34px;
 }
 
 /* Brand: an icon-mark in a soft rounded square + the wordmark */
 .topbar-brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   text-decoration: none;
   color: var(--foreground);
   border-radius: var(--radius-sm);
-  padding: 4px 6px 4px 4px;
-  margin: 0 -6px 0 -4px;
+  padding: 5px 8px 5px 5px;
+  margin: 0 -8px 0 -5px;
   transition: background var(--duration-fast) var(--ease-out);
 }
 
@@ -214,34 +223,40 @@ input:focus-visible { outline: 2px solid var(--ring); outline-offset: -1px; }
 .topbar-brand:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 
 .topbar-brand-mark {
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 6px;
+  border-radius: 8px;
   background: var(--accent-soft);
   color: var(--accent);
   flex-shrink: 0;
+  /* very subtle inner stroke for crispness */
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--accent) 18%, transparent);
 }
+
+.topbar-brand-mark svg { width: 16px; height: 16px; }
 
 .topbar-brand-name {
   font-weight: 600;
-  font-size: 13.25px;
-  letter-spacing: -0.01em;
+  font-size: 14.25px;
+  letter-spacing: -0.012em;
   color: var(--foreground);
+  line-height: 1;
 }
 
 /* Breadcrumb separator + crumb */
 .topbar-crumb-sep {
   color: var(--subtle);
-  font-weight: 400;
-  font-size: 14px;
+  font-weight: 300;
+  font-size: 18px;
   user-select: none;
+  margin: 0 2px;
 }
 
 .topbar-crumb {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 500;
   color: var(--muted-foreground);
   letter-spacing: -0.005em;
@@ -255,11 +270,11 @@ input:focus-visible { outline: 2px solid var(--ring); outline-offset: -1px; }
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: 8px;
+  margin-left: 10px;
   min-width: 0;
 }
 
-.topbar-spacer { flex: 1; min-width: 12px; }
+.topbar-spacer { flex: 1; min-width: 16px; }
 
 .topbar-actions {
   display: flex;
@@ -269,13 +284,41 @@ input:focus-visible { outline: 2px solid var(--ring); outline-offset: -1px; }
 
 .topbar-divider {
   width: 1px;
-  height: 18px;
+  height: 22px;
   background: var(--border);
-  margin: 0 4px;
+  margin: 0 6px;
   flex-shrink: 0;
 }
 
-/* Source label (live mode): shown on the right, mono, subtle */
+/* Bigger buttons inside the navbar — production navbar density */
+.topbar .btn {
+  height: 34px;
+  padding: 0 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.topbar .btn.btn-primary {
+  font-weight: 500;
+  letter-spacing: -0.005em;
+}
+
+.topbar .icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+}
+
+.topbar .icon-btn svg { width: 16px; height: 16px; }
+
+/* Pills sit at navbar height — make them a touch taller */
+.topbar .pill {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 11.5px;
+}
+
+/* Source label (live mode): right side, mono, subtle */
 .source-label {
   font-family: var(--font-mono);
   font-size: 11.5px;
@@ -284,21 +327,19 @@ input:focus-visible { outline: 2px solid var(--ring); outline-offset: -1px; }
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 28ch;
-  padding: 0 8px;
+  padding: 0 10px;
 }
 
 /* "+" inside the primary button */
 .btn-plus {
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
-  font-weight: 500;
-  margin-right: 1px;
+  font-weight: 400;
+  margin-right: 3px;
   display: inline-block;
   transform: translateY(-0.5px);
+  opacity: 0.85;
 }
-
-/* Dashboard topbar leans on extra horizontal padding to feel calmer */
-.topbar-dashboard { padding: 0 16px 0 18px; }
 
 /* ─── Buttons (shadcn-style) ─────────────────────────────────────────── */
 
