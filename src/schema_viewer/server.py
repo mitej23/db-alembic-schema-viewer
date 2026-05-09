@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Literal, Optional
 
 from fastapi import FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+from . import __version__
 from .cache import CacheEntry, CacheStore, GitContext
 from .git_context import git_context, project_root
 from .inspectors.alembic import get_current_revision, list_migrations
@@ -203,14 +204,46 @@ def create_app(settings: Settings) -> FastAPI:
     # ── Static frontend ─────────────────────────────────────────────────
 
     if STATIC_DIR.exists():
+        # Versioned asset cache key: file mtime per asset → URL changes whenever
+        # the file on disk changes, so the browser is forced to re-fetch even
+        # without a version bump.
+        def asset_v(name: str) -> str:
+            try:
+                return f"{__version__}.{int((STATIC_DIR / name).stat().st_mtime)}"
+            except OSError:
+                return __version__
+
         app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
         @app.get("/")
-        def root() -> FileResponse:
+        def root() -> Response:
+            """Serve index.html with version-busted asset URLs.
+
+            Two layers of cache discipline:
+              1. The `?v=…` query string ensures any change to app.js / styles.css
+                 invalidates the browser's cache key.
+              2. We tell the browser never to cache index.html itself, so it
+                 always revalidates and picks up the freshest asset URLs.
+            """
             index = STATIC_DIR / "index.html"
             if not index.exists():
                 raise HTTPException(status_code=500, detail="index.html missing from package")
-            return FileResponse(index)
+            text = index.read_text(encoding="utf-8")
+            text = text.replace(
+                '/static/styles.css',
+                f'/static/styles.css?v={asset_v("styles.css")}',
+            ).replace(
+                '/static/app.js',
+                f'/static/app.js?v={asset_v("app.js")}',
+            )
+            return HTMLResponse(
+                text,
+                headers={
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
+                },
+            )
 
     return app
 
